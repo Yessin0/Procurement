@@ -1,0 +1,18 @@
+# Python / Virtual Environments
+venv/
+*.pyc
+__pycache__/
+
+# Environment variables
+.env
+
+# Database
+*.sqlite3
+
+# Local Data Storage (raw dataset files)
+data/raw/*
+!data/raw/.gitkeep
+
+# IDEs
+.vscode/
+.idea/
