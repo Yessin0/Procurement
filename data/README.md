@@ -4,8 +4,8 @@
 - **Source:** Mendeley Data (Version 2)
 - **DOI:** 10.17632/f3y4nrn3s6.2
 - **Download Link:** https://data.mendeley.com/datasets/f3y4nrn3s6
-- **License:** Creative Commons Attribution 4.0 International (CC BY 4.0)
-- **Internal Shared Drive Link:** <INSERT_YOUR_GOOGLE_DRIVE_LINK_HERE>
+- **License:** Creative Commons Attribution 4.0 International (CC BY-NC 3.0)
+- **Internal Shared Drive Link:** https://drive.google.com/drive/folders/1NtIxAfpEB5GG08k3hIJ3ekZCMvEBzE4M
 
 ## Verification & Checksum
 To verify your local copy matches the team version, run in PowerShell:
