@@ -13,7 +13,7 @@ graph TB
     classDef storage fill:#4A90D9,stroke:#2C5F8A,color:#fff,rx:6
     classDef pipeline fill:#F5A623,stroke:#C07D10,color:#fff,rx:6
     classDef ml fill:#7B68EE,stroke:#4B3DB5,color:#fff,rx:6
-    classDef graph fill:#E67E22,stroke:#A8580F,color:#fff,rx:6
+    classDef netgraph fill:#E67E22,stroke:#A8580F,color:#fff,rx:6
     classDef backend fill:#27AE60,stroke:#1A7A42,color:#fff,rx:6
     classDef database fill:#E74C3C,stroke:#A93226,color:#fff,rx:6
     classDef frontend fill:#1ABC9C,stroke:#148F77,color:#fff,rx:6
@@ -37,9 +37,9 @@ graph TB
     end
 
     subgraph GRAPHMOD["🕸️ Network Analysis module (offline)"]
-        G1["Co-bidding graph\n(bipartite → supplier projection)"]:::graph
-        G2["Community detection\n(Louvain, time windows)"]:::graph
-        G3["Suspicion score per cluster"]:::graph
+        G1["Co-bidding graph\n(bipartite → supplier projection)"]:::netgraph
+        G2["Community detection\n(Louvain, time windows)"]:::netgraph
+        G3["Suspicion score per cluster"]:::netgraph
     end
 
     subgraph SB["🖥️ Backend — Django / DRF"]
