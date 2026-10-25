@@ -36,7 +36,7 @@ class Contract(models.Model):
     # Identifiers from the dataset (several of them are frequently missing)
     tender_id = models.CharField(max_length=255, db_index=True)
     lot_id = models.CharField(max_length=255, null=True, blank=True)
-    persistent_id = models.CharField(max_length=255, null=True, blank=True)
+    persistent_id = models.CharField(max_length=255 , null=True, blank=True)
 
     country = models.CharField(max_length=32, db_index=True)  # anonymised: country_1 ... country_7
     tender_year = models.PositiveSmallIntegerField(db_index=True)
