@@ -13,7 +13,7 @@ graph TB
     classDef storage fill:#4A90D9,stroke:#2C5F8A,color:#fff,rx:6
     classDef pipeline fill:#F5A623,stroke:#C07D10,color:#fff,rx:6
     classDef ml fill:#7B68EE,stroke:#4B3DB5,color:#fff,rx:6
-    classDef netgraph fill:#E67E22,stroke:#A8580F,color:#fff,rx:6
+    classDef graph fill:#E67E22,stroke:#A8580F,color:#fff,rx:6
     classDef backend fill:#27AE60,stroke:#1A7A42,color:#fff,rx:6
     classDef database fill:#E74C3C,stroke:#A93226,color:#fff,rx:6
     classDef frontend fill:#1ABC9C,stroke:#148F77,color:#fff,rx:6
@@ -37,9 +37,9 @@ graph TB
     end
 
     subgraph GRAPHMOD["🕸️ Network Analysis module (offline)"]
-        G1["Supplier-buyer graph\n(bipartite → supplier projection)"]:::netgraph
-        G2["Community detection\n(Louvain, time windows)"]:::netgraph
-        G3["Cluster score +\nvalidation vs cartel_id"]:::netgraph
+        G1["Supplier-buyer graph\n(bipartite → supplier projection)"]:::graph
+        G2["Community detection\n(Louvain, time windows)"]:::graph
+        G3["Cluster score +\nvalidation vs cartel_id"]:::graph
     end
 
     subgraph SB["🖥️ Backend — Django / DRF"]
@@ -178,11 +178,11 @@ stateDiagram-v2
   - your own features that work with winners-only data, e.g. share of a buyer's yearly contracts won by the supplier, number of distinct buyers per supplier per year, buyer concentration (HHI of winners per buyer-year).
   - Never use label-derived or identifier columns (see Section 2). Watch for features that let the model memorize firms.
 - **Model:** XGBoost or Random Forest; start with a simple baseline (logistic regression) to show what the complex model adds.
-- **Class balance:** ~42% positives, so no SMOTE. `class_weight` / `scale_pos_weight` are optional. Choose the decision threshold on a validation set.
+- **Class balance:** ~42% positives, so no SMOTE. `class_weight` / `scale_pos_weight` are optional. The decision threshold is an operating point: the score above which a fixed share of contracts (default 10%, `train_model --flag-rate`) is flagged. Maximising F1 degenerates here into "flag everything" (see `docs/eda_findings.md`).
 - **Metrics:** PR-AUC (compare against the ≈0.42 baseline), precision, recall, F1 — never accuracy alone.
 - **Validation (critical):** contracts of the same cartel are strongly correlated, so a random split leaks information. Use **`GroupKFold` with `cartel_id` as the group**. Because case sizes are very uneven, report the **mean and spread across folds** and consider a "leave the largest case out" experiment. Document everything.
 - **Explainability:** SHAP values per prediction, stored with the prediction and exposed as `feature`, `value`, `impact`.
-- **Deliverables:** reproducible `ml_pipeline/train.py`, serialized model in `ml_pipeline/artifacts/`, batch command `manage.py score_contracts` writing predictions + SHAP values to the database, `ml_pipeline/evaluate.py`.
+- **Deliverables:** plain functions in `ml_pipeline/` (`features.py`, `model.py`, `evaluate.py`, `train.py`, `explain.py`, `scoring.py`), `manage.py train_model` (group-split validation, final model, `artifacts/metrics.json`) and `manage.py score_contracts` (honest out-of-fold predictions + SHAP values + flagged cases).
 
 ### 5.3 Network Analysis (graph)
 
@@ -302,7 +302,7 @@ All IDs and numbers below are **illustrative placeholders**.
   "created_at": "2025-11-01T10:12:00Z"
 }
 ```
-`impact` is the SHAP value: positive pushes toward "suspicious", negative away. Return the top 10 features sorted by absolute impact.
+`impact` is the SHAP value (log-odds scale): positive pushes toward "suspicious", negative away. Return the top 10 features sorted by absolute impact.
 
 **`GET /api/clusters/{id}/`**
 
@@ -514,7 +514,7 @@ python manage.py import_data --source data/raw/GTI_labelled_cartel_data_NOV2023.
 ### 9.6 Train the model
 
 ```bash
-python ml_pipeline/train.py
+python manage.py train_model
 ```
 
 ### 9.7 Run the offline batch jobs
@@ -611,8 +611,8 @@ frontend: display flagged case detail with SHAP explanation
 # Backend
 python manage.py test
 
-# ML module (model evaluation)
-python ml_pipeline/evaluate.py
+# ML module (features, group validation, train + score end to end)
+python manage.py test ml_pipeline
 ```
 
 ---

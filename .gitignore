@@ -16,3 +16,6 @@ data/raw/*
 # IDEs
 .vscode/
 .idea/
+
+ml_pipeline/artifacts/*
+!ml_pipeline/artifacts/.gitkeep
