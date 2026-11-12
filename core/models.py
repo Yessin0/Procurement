@@ -3,7 +3,7 @@ from django.db import models
 
 class Supplier(models.Model):
     """A bidder/supplier. `bidder_id` is the anonymised ID used in the dataset."""
-
+    #unique bidder who submits to win contracts
     bidder_id = models.CharField(max_length=64, unique=True)
 
     class Meta:
@@ -15,12 +15,12 @@ class Supplier(models.Model):
 
 class Buyer(models.Model):
     """A public buyer (contracting authority). `buyer_id` is the anonymised dataset ID."""
-
+    #puts out tenders and awards public contracts 
     buyer_id = models.CharField(max_length=64, unique=True)
-
+    
     class Meta:
         ordering = ["buyer_id"]
-
+    #defines the human-readable representation of an object (supplier_1045)
     def __str__(self):
         return self.buyer_id
 
@@ -39,21 +39,28 @@ class Contract(models.Model):
     persistent_id = models.CharField(max_length=255 , null=True, blank=True)
 
     country = models.CharField(max_length=32, db_index=True)  # anonymised: country_1 ... country_7
-    tender_year = models.PositiveSmallIntegerField(db_index=True)
+    tender_year = models.PositiveSmallIntegerField(db_index=True) #index for matching records
+    
     # NB: the FK fields below create the DB columns `buyer_id` / `supplier_id`
-    # holding *our* primary keys, not the dataset's IDs (those live on Buyer / Supplier).
+    # holding primary keys, not the dataset's IDs (those live on Buyer / Supplier).
+    
+    #one buyer can have multiple contracts 
+    #one supplier can win ...
+    #each contract has at most one buyer and exactly one supplier
     buyer = models.ForeignKey(Buyer, null=True, blank=True, on_delete=models.PROTECT, related_name="contracts")
+    #related_name=contracts => najmou naccess reverse relationship kima supplier.contracts.all() 
     supplier = models.ForeignKey(Supplier, on_delete=models.PROTECT, related_name="contracts")
-    cpv2 = models.CharField(max_length=16, blank=True)  # dataset column `cpv2_smp`
+    
+    cpv2 = models.CharField(max_length=16, blank=True)  # dataset column `cpv2_smp` : classifies the subject of public procurement contracts.
 
-    # Handy columns for the API / filters (also present inside `screens`)
+    #  API / filters (also present inside `screens`)
     lot_bids_count = models.FloatField(null=True, blank=True)
     relative_value = models.FloatField(null=True, blank=True)
 
     # All numeric risk screens of the dataset, used as ML features
     screens = models.JSONField(default=dict, blank=True)
 
-    # Ground truth: EVALUATION ONLY. Never a feature, never shown in case views.
+    # EVALUATION ONLY. Never a feature, never shown in case views.
     is_cartel = models.BooleanField()
     cartel_id = models.CharField(max_length=255, db_index=True)
 
