@@ -15,6 +15,7 @@ class Cluster(models.Model):
     density = models.FloatField()
     n_contracts = models.PositiveIntegerField()
     n_buyers = models.PositiveIntegerField()
+    buyer_concentration = models.FloatField(null=True, blank=True)  # HHI of the buyers' share of the contracts
     mean_model_risk = models.FloatField(null=True, blank=True)
     suspicion_score = models.FloatField(null=True, blank=True)
     config = models.JSONField(default=dict, blank=True)

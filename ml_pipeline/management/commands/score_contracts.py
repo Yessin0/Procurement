@@ -24,6 +24,9 @@ class Command(BaseCommand):
                                  "labelled dataset). final: score with the final model (in-sample on the dataset).")
         parser.add_argument("--flag-top", type=int, default=300,
                             help="Open a pending case for the N highest-risk contracts (0 = no cases).")
+        parser.add_argument("--max-per-supplier", type=int, default=3,
+                            help="Flag at most this many contracts per supplier (0 = no limit). Contracts of one supplier "
+                                 "share most screens, get near-identical scores and would otherwise fill the whole list.")
         parser.add_argument("--batch-size", type=int, default=1000)
 
     def handle(self, *args, **options):
@@ -52,18 +55,24 @@ class Command(BaseCommand):
                             top_features=r.top_features)
                  for r in scored.itertuples()],
                 batch_size=options["batch_size"])
-            n_new, n_updated = self.flag_cases(scored, options["flag_top"])
+            supplier_of = dict(zip(frame["contract_id"], frame["supplier_id"]))
+            n_new, n_updated, n_removed = self.flag_cases(scored, options["flag_top"], options["max_per_supplier"], supplier_of)
 
         self.stdout.write(self.style.SUCCESS(f"Stored {len(scored)} predictions ({version})."))
         self.stdout.write(f"  predicted suspicious: {int(scored.predicted_label.sum())} | threshold {threshold:.3f}")
         if options["flag_top"]:
-            self.stdout.write(f"  cases: {n_new} new, {n_updated} pending cases re-scored (reviewed cases untouched)")
+            self.stdout.write(f"  cases: {n_new} new, {n_updated} pending re-scored, {n_removed} pending dropped "
+                              f"(no longer in the list). Reviewed cases are never touched.")
 
     @staticmethod
-    def flag_cases(scored, top_n):
+    def flag_cases(scored, top_n, max_per_supplier, supplier_of):
         if top_n <= 0:
-            return 0, 0
-        top = scored.nlargest(top_n, "risk_score")
+            return 0, 0, 0
+        ranked = scored.sort_values("risk_score", ascending=False)
+        if max_per_supplier > 0:
+            ranked = ranked.assign(supplier=ranked["contract_id"].map(supplier_of))
+            ranked = ranked.groupby("supplier", sort=False).head(max_per_supplier)
+        top = ranked.head(top_n)
         score_by_contract = {int(r.contract_id): float(r.risk_score) for r in top.itertuples()}
 
         existing = list(FlaggedCase.objects.filter(source=FlaggedCase.Source.MODEL,
@@ -77,4 +86,10 @@ class Command(BaseCommand):
         new_cases = [FlaggedCase(source=FlaggedCase.Source.MODEL, contract_id=cid, score=score)
                      for cid, score in score_by_contract.items() if cid not in known]
         FlaggedCase.objects.bulk_create(new_cases)
-        return len(new_cases), len(pending)
+
+        # Unreviewed cases that dropped out of the list are removed; analyst decisions are never touched
+        stale = FlaggedCase.objects.filter(source=FlaggedCase.Source.MODEL, status=FlaggedCase.Status.PENDING) \
+                                   .exclude(contract_id__in=score_by_contract)
+        n_removed = stale.count()
+        stale.delete()
+        return len(new_cases), len(pending), n_removed

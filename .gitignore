@@ -19,3 +19,6 @@ data/raw/*
 
 ml_pipeline/artifacts/*
 !ml_pipeline/artifacts/.gitkeep
+
+graph_analysis/artifacts/*
+!graph_analysis/artifacts/.gitkeep

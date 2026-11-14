@@ -4,12 +4,11 @@ import tempfile
 from io import StringIO
 from pathlib import Path
 from unittest import mock
-
 import numpy as np
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase
-
+from django.db.models import Count
 from cases.models import FlaggedCase
 from core.models import Contract, Supplier
 from ingestion.management.commands.import_data import SCREEN_COLUMNS
@@ -23,11 +22,12 @@ from ml_pipeline.models import Prediction
 def make_dataset(n_cartels=12, per_cartel=40, seed=0):
     """Small synthetic dataset: half positives per cartel, with a real signal in a few screens."""
     rng = np.random.default_rng(seed)
-    supplier = Supplier.objects.create(bidder_id="s1")
     contracts = []
     for k in range(n_cartels):
+        suppliers = [Supplier.objects.create(bidder_id=f"s{k}_{j}") for j in range(4)]
         for i in range(per_cartel):
             positive = i % 2 == 0
+            supplier = suppliers[(i // 2) % 4]
             screens = {c: float(rng.normal()) for c in FEATURE_COLUMNS}
             screens["lot_bidscount_avg"] += 1.5 * positive
             screens["benfords_market_yearly_avg"] += 1.0 * positive
@@ -126,6 +126,16 @@ class EndToEndTests(TestCase):
         self.assertEqual(FlaggedCase.objects.count(), 10)
         case.refresh_from_db()
         self.assertEqual((case.status, case.comment), (FlaggedCase.Status.CONFIRMED, "checked"))
+
+        # A cap per supplier spreads the flagged cases over many suppliers; pending cases outside the new
+        # list are dropped, the reviewed one is kept
+        self.run_command("score_contracts", "--flag-top", "30", "--max-per-supplier", "2")
+        per_supplier = (FlaggedCase.objects.exclude(status=FlaggedCase.Status.CONFIRMED)
+                        .values("contract__supplier_id").annotate(n=Count("id")))
+        self.assertLessEqual(FlaggedCase.objects.count(), 31)   # 30 listed (+ the reviewed case if it fell out)
+        self.assertLessEqual(max(row["n"] for row in per_supplier), 2)
+        case.refresh_from_db()
+        self.assertEqual(case.status, FlaggedCase.Status.CONFIRMED)
 
         # Final-model mode stores a second, separately versioned set
         self.run_command("score_contracts", "--mode", "final", "--flag-top", "0")
