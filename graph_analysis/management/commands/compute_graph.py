@@ -33,7 +33,7 @@ class Command(BaseCommand):
         parser.add_argument("--step", type=int, default=2, help="Years between window starts (= window: no overlap)")
         parser.add_argument("--resolution", type=float, default=1.0, help="Louvain resolution (higher = smaller clusters)")
         parser.add_argument("--min-size", type=int, default=3, help="Store only clusters with at least this many suppliers")
-        parser.add_argument("--dominant-share", type=float, default=0.05,
+        parser.add_argument("--dominant-share", type=float, default=0.10,
                             help="Exclude suppliers holding more than this share of all contracts (0 = keep all)")
         parser.add_argument("--flag-top", type=int, default=20, help="Open a pending case for the N highest-scoring clusters")
         parser.add_argument("--model-version", default=None, help="Predictions to use (default: the latest '-oof' set)")
