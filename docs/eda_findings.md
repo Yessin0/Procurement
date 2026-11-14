@@ -71,3 +71,13 @@ Working notes for the report. Source: `GTI_labelled_cartel_data_NOV2023.csv` (Me
 - Own features from winners-only data (supplier share of a buyer's yearly contracts, buyers per supplier-year, buyer concentration HHI); keep them only if they improve the group-split and within-year scores.
 - Precision at top-k (e.g. top 5% / 10% of contracts) as the operational metric, and threshold selection on out-of-fold predictions.
 - Repeat the group split with several fold assignments to see how stable the 0.61 is.
+
+## 8. Supplier-buyer network (notebooks/graph_baseline.py, `compute_graph`)
+
+- Coverage: 19.5% of rows have no buyer_id (country_2: 36%, country_4: 16%, others 0%). 278 suppliers have no known buyer, so 601 of 1,001 suppliers can be clustered. The median buyer works with 1 supplier; the graph has 17 components (largest: 420 suppliers).
+- Dominant supplier country_5_920: 1,973 rows (12.6%), all in case country_5_11; it is excluded from the graph (exclusion rule: more than 10% of all contracts). Two other large suppliers stay in: country_3_821 (1,177 rows, case country_3_5) and country_2_54 (1,079 rows, case country_2_2).
+- Communities vs real cartels (normalized weights, Louvain resolution 1.0): NMI 0.62 / ARI 0.36 / purity 0.54, against random 0.20 / 0.00 / 0.28 and grouping by country 0.51 / 0.19 / 0.36. Stable over 24 configurations (NMI 0.57-0.63). 2-year windows: size-weighted NMI 0.67 vs 0.34 random, ARI 0.36 vs 0.00.
+- Large communities are loose and mixed (145 and 138 suppliers, density 0.08, 12-13 cartels); small dense single-buyer communities are clean (42 suppliers, one buyer, 100% from country_2_7). A 47-supplier community around one big buyer mixes 18 cartels.
+- Cluster score = mean of density, buyer concentration and mean model risk (66 clusters). Spearman with the share of cartel-labelled contracts: overall score +0.26, model risk +0.37, buyer concentration +0.21, density +0.10, size 0.00; within windows (window mean removed): score +0.08, model risk +0.21, buyer concentration +0.09, density 0.00, size -0.10. The overall figure mostly reflects time (labelled share per window: 0.91 in 2004, 0.67 in 2014, 0.11 in 2016, 0.00 from 2018). The network is validated on membership recovery (NMI/ARI), not on collusion timing; the score is a relative ranking with visible components.
+- Flagged contracts: capping at 3 per supplier raised precision at the top 300 from 0.46 (17 suppliers) to 0.66 (165 suppliers).
+- Limits: only cartel firms in the file; 40% of suppliers invisible to the network; the score is a relative ranking, not a probability.
