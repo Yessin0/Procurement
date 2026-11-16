@@ -3,12 +3,12 @@ from django.core.exceptions import ValidationError
 from django.db import models
 
 
-class FlaggedCase(models.Model):
+class FlaggedCase(models.Model): 
     """Something an analyst must review: a single contract (source=model) or a cluster (source=cluster)."""
 
     class Source(models.TextChoices):
-        MODEL = "model", "Model"
-        CLUSTER = "cluster", "Cluster"
+        MODEL = "model", "Model"  #model the actual value stored in db , Model the human readable label
+        CLUSTER = "cluster", "Cluster" #source = models.CharField(    max_length=16,    choices=Source.choices)
 
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"
@@ -23,14 +23,16 @@ class FlaggedCase(models.Model):
     comment = models.TextField(blank=True)
     reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="reviewed_cases")
     reviewed_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)  #set when the object is first created (creation timestamp remain unchanged)
 
     class Meta:
-        ordering = ["-score"]
+        ordering = ["-score"]   # -: descending order
 
     def clean(self):
-        if self.source == self.Source.MODEL and (self.contract_id is None or self.cluster_id is not None):
+        #If the source is ML, then: - A contract must exist. A cluster must not exist.
+        if self.source == self.Source.MODEL and (self.contract_id is None or self.cluster_id is not None): 
             raise ValidationError("A 'model' case needs a contract and no cluster.")
+        #If the source is graph analysis : A cluster must exist, A contract must not exist
         if self.source == self.Source.CLUSTER and (self.cluster_id is None or self.contract_id is not None):
             raise ValidationError("A 'cluster' case needs a cluster and no contract.")
 
